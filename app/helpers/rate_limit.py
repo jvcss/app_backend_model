@@ -5,7 +5,8 @@ import redis
 from app.core.config import settings
 
 d = True if settings.MODE == "Development" else False
-r = redis.from_url(settings.CELERY_BROKER_URL if not d else settings.CELERY_BROKER_URL_EXTERNAL)  # you already use Redis
+r = redis.from_url(settings.CELERY_BROKER_URL if not d else settings.CELERY_BROKER_URL_EXTERNAL)
+  # you already use Redis
 
 def _key(prefix: str, email: str, ip: str) -> str:
     return f"{prefix}:{email.lower()}:{ip}"
