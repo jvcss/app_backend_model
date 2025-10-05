@@ -4,7 +4,7 @@ from typing import Tuple
 import redis
 from app.core.config import settings
 
-d = True if settings.MODE == "Development" else False
+d = True if settings.MODE == "development" else False
 r = redis.from_url(settings.CELERY_BROKER_URL if not d else settings.CELERY_BROKER_URL_EXTERNAL)
   # you already use Redis
 

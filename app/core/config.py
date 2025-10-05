@@ -6,14 +6,17 @@ envfile=".env"
 config = Config(envfile)
 logging.basicConfig(level=logging.INFO)
 
-if config("MODE", default="Development") == "Development":
+CELERY_BROKER_URL_CASE=""
+CELERY_RESULT_BACKEND_CASE=""
+
+if config("MODE", default="development") == "development":
     logging.info("Running in Development mode")
-    CELERY_BROKER_URL: str = config("CELERY_BROKER_URL_EXTERNAL", default="redis://localhost:6397/0")
-    CELERY_RESULT_BACKEND: str = config("CELERY_BROKER_URL_EXTERNAL", default="redis://localhost:6397/0")
+    CELERY_BROKER_URL_CASE: str = config("CELERY_BROKER_URL_EXTERNAL", default="redis://localhost:6397/0")
+    CELERY_RESULT_BACKEND_CASE: str = config("CELERY_BROKER_URL_EXTERNAL", default="redis://localhost:6397/0")
 else:
     logging.info("Running in Production mode")
-    CELERY_BROKER_URL: str = config("CELERY_BROKER_URL", default="redis://redis_app_backend:6379/0")
-    CELERY_RESULT_BACKEND: str = config("CELERY_RESULT_BACKEND", default="redis://redis_app_backend:6379/0")
+    CELERY_BROKER_URL_CASE: str = config("CELERY_BROKER_URL", default="redis://redis_app_backend:6379/0")
+    CELERY_RESULT_BACKEND_CASE: str = config("CELERY_RESULT_BACKEND", default="redis://redis_app_backend:6379/0")
 
 class Settings:
     """
