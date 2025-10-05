@@ -52,3 +52,4 @@ htmlcov/
 .pytest_cache/
 .cache/
 todos-arquivos.txt
+todos-arquivos.mda
