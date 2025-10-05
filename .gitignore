@@ -1,0 +1,54 @@
+
+.venv/
+
+.env
+
+alembic.ini
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+*.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.sqlite3
+*.db
+
+# VSCode
+.vscode/
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# MySQL
+*.sql
+*.mysql
+*.pid
+*.err
+
+# Redis
+dump.rdb
+*.aof
+__pycache__
+# Migrations
+migrations/__pycache__/
+migrations/*.pyc
+*.pyc
+# System
+.DS_Store
+Thumbs.db
+
+# Test
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+.cache/
+todos-arquivos.txt

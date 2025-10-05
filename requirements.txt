@@ -1,0 +1,17 @@
+fastapi[all]
+pydantic[email]
+sqlalchemy
+uvicorn
+redis
+bcrypt
+python-dotenv
+alembic
+aiohttp
+python-jose
+starlette
+aiomysql
+pymysql
+celery[redis]
+flower
+cryptography
+pyotp

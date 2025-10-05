@@ -1,0 +1,69 @@
+services:
+
+  worker_app_backend:
+    build: .
+    env_file:
+      - .env
+    container_name: celery_app_backend_worker
+    command: ["worker"]
+    depends_on:
+      - redis_app_backend
+
+  beat_app_backend:
+    build: .
+    env_file:
+      - .env
+    container_name: celery_app_backend_beat
+    command: ["beat"]
+    depends_on:
+      - redis_app_backend
+
+  flower_app_backend:
+    build: .
+    env_file:
+      - .env
+    container_name: celery_app_backend_flower
+    command: ["flower"]
+    ports:
+      - "5595:5555"
+    depends_on:
+      - redis_app_backend
+
+  redis_app_backend:
+    image: redis
+    container_name: redis_app_backend
+    restart: always
+    ports:
+      - "6398:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis_app_backend_data:/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+  mysql_app_backend:
+    image: mysql
+    container_name: mysql_app_backend
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: dbname
+    ports:
+      - "3384:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - mysql_app_backend_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+volumes:
+  mysql_app_backend_data:
+  redis_app_backend_data:
