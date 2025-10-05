@@ -37,5 +37,6 @@ alembic upgrade head
 
 # To copy the code in pieces slipt by the current folder
 ```sh
-find . -type f \( -name "*.py" -o -name "*.md" -o -name "*.txt" \) -print0 | while IFS= read -r -d '' file; do echo "# --- Conteúdo do arquivo: $file ---" >> todos-arquivos.md; ext="${file##*.}"; if [[ "$ext" == "py" ]]; then echo '```py' >> todos-arquivos.md; elif [[ "$ext" == "md" ]]; then echo '```md' >> todos-arquivos.md; elif [[ "$ext" == "txt" ]]; then echo '```text' >> todos-arquivos.md; else echo '```' >> todos-arquivos.md; fi; cat "$file" >> todos-arquivos.md; echo '```' >> todos-arquivos.md; echo "" >> todos-arquivos.md; done
+# todos-arquivos.mda &&
+find ./app \( -name "*.py" -o -name "*.md" -o -name "*.txt" -o -name "*.yaml" -o -name "*.sh" -o -name "*.env.example" -o -name "*.Dockerfile" \) -type f -print0 | while IFS= read -r -d '' file; do echo "# --- Conteúdo do arquivo: $file ---" >> todos-arquivos.mda; cat "$file" >> todos-arquivos.mda; echo -e "\n\n" >> todos-arquivos.mda; done
 ```
