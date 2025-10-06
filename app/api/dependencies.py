@@ -1,10 +1,13 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+import redis.asyncio as aioredis
 from sqlalchemy.orm import Session
 from app.db.session import SessionAsync, SessionSync
+from app.helpers.getters import isDebugMode
 from app.models.user import User
 from app.core.security import SECRET_KEY, ALGORITHM
+from app.core.config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -12,7 +15,6 @@ async def get_db():
     async with SessionAsync() as session:
         yield session
 
-# Synchronous version if needed
 def get_db_sync():
     db = SessionSync()
     try:
@@ -21,7 +23,6 @@ def get_db_sync():
         db.close()
 
 
-# app/api/dependencies.py (adjusted)
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db_sync)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -41,3 +42,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if not user or int(tv) != int(user.token_version or 1):
         raise credentials_exception
     return user
+
+async def get_redis():
+    redis = await aioredis.from_url(
+        settings.CELERY_BROKER_URL_EXTERNAL if isDebugMode() else settings.CELERY_BROKER_URL
+    )
+    try:
+        yield redis
+    finally:
+        await redis.close()

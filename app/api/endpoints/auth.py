@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError, jwt
 import pyotp
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -39,7 +40,7 @@ from app.schemas.auth import (
 )
 
 from app.models.team import Team as TeamModel
-from app.api.dependencies import get_current_user, get_db
+from app.api.dependencies import get_current_user, get_db, get_redis
 
 from app.models.user import User
 from app.models.password_reset import PasswordReset
@@ -80,9 +81,18 @@ async def read_me(current_user: User = Depends(get_current_user)):
     }
 
 @router.post("/logout")
-async def logout():
-    # Com JWT, logout pode ser gerenciado no cliente ou via blacklist (implementar)
-    return {"message": "Logout realizado"}
+async def logout(
+    logout_all: bool = False,
+    redis: Redis = Depends(get_redis),
+    db: AsyncSession = Depends(get_db)
+):
+    if logout_all:
+        # Incrementa versão (invalida tudo)
+        current_user.token_version += 1
+        await db.commit()
+    else:
+        # Blacklist Redis (invalida apenas atual)
+        await redis.setex(f"blacklist:{token}", ttl, "revoked")
 
 @router.post("/register", response_model=Token)
 async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
