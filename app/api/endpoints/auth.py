@@ -26,8 +26,16 @@ from jose import JWTError, jwt
 import pyotp
 from sqlalchemy.orm import Session
 
-from app.schemas.auth import Token, Login
 from app.schemas.user import UserCreate
+from app.schemas.auth import (
+    Token, 
+    Login, 
+    ForgotPasswordStartIn, 
+    ForgotPasswordVerifyIn, 
+    ForgotPasswordVerifyOut, 
+    ForgotPasswordConfirmIn, 
+    TwoFASetupOut
+)
 
 from app.models.team import Team as TeamModel
 from app.api.dependencies import get_current_user, get_db, get_db_sync
@@ -35,9 +43,7 @@ from app.api.dependencies import get_current_user, get_db, get_db_sync
 from app.db.session import SessionSync
 from app.models.user import User
 from app.models.password_reset import PasswordReset
-from app.schemas.password_reset import (
-    ForgotPasswordStartIn, ForgotPasswordVerifyIn, ForgotPasswordVerifyOut, ForgotPasswordConfirmIn, TwoFASetupOut
-)
+
 from app.core.security import (
     generate_otp, hash_otp, verify_otp, create_reset_session_token, verify_password,
     verify_totp, generate_totp_secret, create_access_token, get_password_hash, SECRET_KEY, ALGORITHM
