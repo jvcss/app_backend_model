@@ -38,7 +38,7 @@ from app.schemas.auth import (
 )
 
 from app.models.team import Team as TeamModel
-from app.api.dependencies import get_current_user, get_db, get_db_sync
+from app.api.dependencies import get_current_user, get_db_sync
 
 from app.db.session import SessionSync
 from app.models.user import User
@@ -50,7 +50,6 @@ from app.core.security import (
 )
 from app.helpers.rate_limit import allow
 from app.mycelery.worker import send_password_otp, send_password_otp_local
-
 
 router = APIRouter()
 
@@ -84,16 +83,13 @@ def logout():
 
 @router.post("/register", response_model=Token)
 def register(user: UserCreate, db: Session = Depends(get_db_sync)):
-    # Verifica se o email já está cadastrado
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
 
-    # Cria o usuário com a senha hasheada
     hashed_password = get_password_hash(user.password)
     new_user = User(name=user.name, email=user.email, password=hashed_password)
     db.add(new_user)
-    # Realiza um flush para que new_user.id seja atribuído sem efetuar o commit
     db.flush()
 
     # Cria um time para o novo usuário
@@ -115,13 +111,11 @@ def register(user: UserCreate, db: Session = Depends(get_db_sync)):
 @router.post("/forgot-password/start", status_code=status.HTTP_202_ACCEPTED)
 def forgot_password_start(payload: ForgotPasswordStartIn, request: Request, db: Session = Depends(get_db_sync)):
     client_ip = request.headers.get("x-forwarded-for", request.client.host)
-    # throttle
     if not allow("fp:start", payload.email, client_ip, max_attempts=5, window_sec=900):
         raise HTTPException(status_code=429, detail="Too many requests")
 
     user = db.query(User).filter(User.email == payload.email).first()
 
-    # Always behave the same (anti-enumeration)
     if user:
         otp = generate_otp()
         pr = PasswordReset(
@@ -134,11 +128,9 @@ def forgot_password_start(payload: ForgotPasswordStartIn, request: Request, db: 
         db.add(pr)
         db.commit()
 
-        # Send OTP out-of-band
         #send_password_otp_local(payload.email, otp)
         send_password_otp_local.delay(payload.email, otp)
 
-    # Return 202 with generic message
     return {"message": "If the email exists, a verification code has been sent."}
 
 @router.post("/forgot-password/verify", response_model=ForgotPasswordVerifyOut)
@@ -147,17 +139,14 @@ def forgot_password_verify(payload: ForgotPasswordVerifyIn, request: Request, db
     if not allow("fp:verify", payload.email, client_ip, max_attempts=10, window_sec=900):
         raise HTTPException(status_code=429, detail="Too many attempts")
 
-    # pick most recent valid request
     pr = (db.query(PasswordReset)
             .filter(PasswordReset.email == payload.email, PasswordReset.consumed_at.is_(None))
             .order_by(PasswordReset.id.desc())
             .first())
 
-    # Uniform failure to avoid oracle
     if not pr or not pr.otp_hash or not pr.otp_expires_at or pr.otp_expires_at < datetime.now(pr.otp_expires_at.tzinfo):
         raise HTTPException(status_code=400, detail="Invalid or expired code")
 
-    # verify OTP
     if not payload.otp or not verify_otp(payload.otp, pr.otp_hash):
         pr.attempts += 1
         db.commit()
@@ -165,7 +154,6 @@ def forgot_password_verify(payload: ForgotPasswordVerifyIn, request: Request, db
 
     pr.otp_verified = True
 
-    # if user requires TOTP, enforce it
     user = db.query(User).get(pr.user_id) if pr.user_id else None
     if pr.require_totp:
         if not user or not user.two_factor_secret or not payload.totp or not verify_totp(user.two_factor_secret, payload.totp):
@@ -174,7 +162,6 @@ def forgot_password_verify(payload: ForgotPasswordVerifyIn, request: Request, db
             raise HTTPException(status_code=400, detail="Invalid or missing authenticator code")
         pr.totp_verified = True
 
-    # issue reset session token
     pr.reset_session_issued_at = datetime.now(timezone.utc)
     db.commit()
 
@@ -201,12 +188,10 @@ def forgot_password_confirm(payload: ForgotPasswordConfirmIn, request: Request, 
     if not user:
         raise HTTPException(status_code=401, detail="Invalid reset session")
 
-    # rotate password & bump token_version
     user.password = get_password_hash(payload.new_password)
     user.token_version = (user.token_version or 1) + 1
     db.commit()
 
-    # mark last reset as consumed
     pr = (db.query(PasswordReset)
             .filter(PasswordReset.user_id == user_id, PasswordReset.consumed_at.is_(None))
             .order_by(PasswordReset.id.desc())
@@ -236,4 +221,3 @@ def twofa_verify(code: str, current_user: User = Depends(get_current_user), db: 
     current_user.two_factor_enabled = True
     db.commit()
     return
-
