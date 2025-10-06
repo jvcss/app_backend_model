@@ -1,12 +1,10 @@
 
-import time
-from typing import Tuple
 import redis
 from app.core.config import settings
+from app.helpers.getters import isDebugMode
 
-d = True if settings.MODE == "development" else False
+d = True if isDebugMode() else False
 r = redis.from_url(settings.CELERY_BROKER_URL if not d else settings.CELERY_BROKER_URL_EXTERNAL)
-  # you already use Redis
 
 def _key(prefix: str, email: str, ip: str) -> str:
     return f"{prefix}:{email.lower()}:{ip}"

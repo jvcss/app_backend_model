@@ -1,3 +1,25 @@
+"""
+    Authentication and Authorization Endpoints
+    This module provides API endpoints for user authentication, registration, password reset, and two-factor authentication (2FA) management. It leverages FastAPI for routing, SQLAlchemy for database interactions, and JWT for secure token handling. The endpoints are designed with security best practices, including rate limiting, anti-enumeration measures, and support for out-of-band OTP delivery.
+    Endpoints:
+    - /login: Authenticates a user and issues a JWT access token.
+    - /me: Returns the current authenticated user's information and a fresh access token.
+    - /logout: Handles user logout (JWT-based, client-side or via blacklist).
+    - /register: Registers a new user, creates a personal team, and issues an access token.
+    - /forgot-password/start: Initiates the password reset process by sending an OTP to the user's email.
+    - /forgot-password/verify: Verifies the OTP (and optionally TOTP) for password reset and issues a reset session token.
+    - /forgot-password/confirm: Confirms the password reset using the reset session token and updates the user's password.
+    - /2fa/setup: Generates and returns a TOTP secret and provisioning URI for 2FA setup.
+    - /2fa/verify: Verifies the TOTP code and enables 2FA for the user.
+    Security Features:
+    - Rate limiting to prevent brute-force and enumeration attacks.
+    - Uniform error responses to avoid leaking user existence.
+    - OTP and TOTP verification for secure password reset and 2FA.
+    - Token versioning to invalidate old tokens upon password change.
+    Dependencies:
+    - FastAPI, SQLAlchemy, pyotp, jose, custom security and helper modules.
+
+"""
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError, jwt
@@ -5,7 +27,7 @@ import pyotp
 from sqlalchemy.orm import Session
 
 from app.schemas.auth import Token, Login
-from app.schemas.user import UserCreate  # novo schema para cadastro
+from app.schemas.user import UserCreate
 
 from app.models.team import Team as TeamModel
 from app.api.dependencies import get_current_user, get_db, get_db_sync
@@ -84,8 +106,6 @@ def register(user: UserCreate, db: Session = Depends(get_db_sync)):
     access_token = create_access_token(data={"sub": str(new_user.id)}, token_version=new_user.token_version)
     return {"access_token": access_token, "token_type": "bearer"}
 
-
-# --- 1) START ---
 @router.post("/forgot-password/start", status_code=status.HTTP_202_ACCEPTED)
 def forgot_password_start(payload: ForgotPasswordStartIn, request: Request, db: Session = Depends(get_db_sync)):
     client_ip = request.headers.get("x-forwarded-for", request.client.host)
@@ -115,7 +135,6 @@ def forgot_password_start(payload: ForgotPasswordStartIn, request: Request, db: 
     # Return 202 with generic message
     return {"message": "If the email exists, a verification code has been sent."}
 
-# --- 2) VERIFY (OTP + optional TOTP) ---
 @router.post("/forgot-password/verify", response_model=ForgotPasswordVerifyOut)
 def forgot_password_verify(payload: ForgotPasswordVerifyIn, request: Request, db: Session = Depends(get_db_sync)):
     client_ip = request.headers.get("x-forwarded-for", request.client.host)
@@ -156,7 +175,6 @@ def forgot_password_verify(payload: ForgotPasswordVerifyIn, request: Request, db
     rst = create_reset_session_token(user_id=user.id, token_version=user.token_version)
     return ForgotPasswordVerifyOut(reset_session_token=rst)
 
-# --- 3) CONFIRM (set new password) ---
 @router.post("/forgot-password/confirm", status_code=status.HTTP_204_NO_CONTENT)
 def forgot_password_confirm(payload: ForgotPasswordConfirmIn, request: Request, db: Session = Depends(get_db_sync)):
     auth_header = request.headers.get("authorization", "")
@@ -193,12 +211,10 @@ def forgot_password_confirm(payload: ForgotPasswordConfirmIn, request: Request, 
 
     return
 
-# --- OPTIONAL: enable TOTP for a user (after normal auth) ---
 @router.post("/2fa/setup", response_model=TwoFASetupOut)
 def twofa_setup(current_user: User = Depends(get_current_user), db: Session = Depends(get_db_sync)):
-    # TODO: replace Depends(...) with your existing get_current_user dependency
     secret = generate_totp_secret()
-    issuer = "YourApp"
+    issuer = "Application"
     label = f"{issuer}:{current_user.email}"
     url = pyotp.totp.TOTP(secret).provisioning_uri(name=label, issuer_name=issuer)
 
@@ -214,3 +230,4 @@ def twofa_verify(code: str, current_user: User = Depends(get_current_user), db: 
     current_user.two_factor_enabled = True
     db.commit()
     return
+
