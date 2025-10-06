@@ -31,9 +31,7 @@ def create_access_token(data: dict, token_version: int, expires_delta: timedelta
     to_encode.update({"exp": expire, "tv": token_version})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# --- OTP (email) ---
 def generate_otp() -> str:
-    # digits only to ease typing in mobile
     return "".join(secrets.choice(string.digits) for _ in range(OTP_LENGTH))
 
 def hash_otp(otp: str) -> str:
@@ -42,14 +40,12 @@ def hash_otp(otp: str) -> str:
 def verify_otp(otp: str, hashed: str) -> bool:
     return bcrypt.checkpw(otp.encode("utf-8"), hashed.encode("utf-8"))
 
-# --- TOTP (authenticator app) ---
 def generate_totp_secret() -> str:
     return pyotp.random_base32()
 
 def verify_totp(secret: str, code: str) -> bool:
     return pyotp.TOTP(secret).verify(code, valid_window=1)  # ±30s window
 
-# --- Reset-session JWT (limited scope) ---
 def create_reset_session_token(user_id: int, token_version: int):
     expire = datetime.now(timezone.utc) + timedelta(minutes=RESET_SESSION_EXPIRE_MINUTES)
     payload = {"sub": str(user_id), "tv": token_version, "scope": "pwd_reset", "exp": expire}
