@@ -28,3 +28,4 @@ class ForgotPasswordConfirmIn(BaseModel):
 class TwoFASetupOut(BaseModel):
     secret: str
     otpauth_url: str
+    qr_code: str 

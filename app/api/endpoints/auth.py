@@ -28,6 +28,8 @@ from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.helpers.getters import isDebugMode
+from app.helpers.qrcode_generator import generate_qr_code_base64
 from app.schemas.user import UserCreate
 from app.schemas.auth import (
     Token, 
@@ -85,6 +87,9 @@ async def logout(
     authorization: str = Header(...),
     redis: Redis = Depends(get_redis)
 ):
+    if isDebugMode():
+        return {"message": "Logout successful"}
+    
     token = authorization.replace("Bearer ", "")
     
     # Decodifica para pegar expiração
@@ -236,15 +241,26 @@ async def forgot_password_confirm(payload: ForgotPasswordConfirmIn, request: Req
 
 @router.post("/2fa/setup", response_model=TwoFASetupOut)
 async def twofa_setup(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    """
+    Configura 2FA para o usuário autenticado.
+    
+    Retorna:
+    - secret: Chave secreta (para backup manual)
+    - otpauth_url: URL para configuração manual
+    - qr_code: Imagem Base64 do QR Code para leitura direta
+    """
     secret = generate_totp_secret()
     issuer = "Application"
     label = f"{issuer}:{current_user.email}"
     url = pyotp.totp.TOTP(secret).provisioning_uri(name=label, issuer_name=issuer)
-
+    try:
+        qr_code_base64 = generate_qr_code_base64(url)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail="Erro ao gerar QR Code")
     current_user.two_factor_secret = secret
     current_user.two_factor_enabled = False
     await db.commit()
-    return TwoFASetupOut(secret=secret, otpauth_url=url)
+    return TwoFASetupOut(secret=secret, otpauth_url=url, qr_code=qr_code_base64)
 
 @router.post("/2fa/verify", status_code=204)
 async def twofa_verify(code: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):

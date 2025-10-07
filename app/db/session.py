@@ -17,7 +17,7 @@ MYSQL_EXTERNAL_URL_SYNC = settings.MYSQL_EXTERNAL_URL_SYNC
 if isDebugMode():
     logger.info("Using EXTERNAL database URL for debug mode")
     # mysql EXTERNAL URL LOCALHOST
-    engine_internal = create_async_engine(MYSQL_EXTERNAL_URL, future=True, echo=True)
+    engine_internal = create_async_engine(MYSQL_EXTERNAL_URL, future=True, echo=False)
     SessionAsync = sessionmaker(engine_internal, class_=AsyncSession, expire_on_commit=False)
     # mysql EXTERNAL URL LOCALHOST sync
     engine_internal_sync = create_engine(MYSQL_EXTERNAL_URL_SYNC, pool_pre_ping=True)
@@ -25,7 +25,7 @@ if isDebugMode():
 else:
     logger.info("Using INTERNAL database URL for production mode")
     # mysql internal
-    engine_internal = create_async_engine(MYSQL_INTERNAL_URL, future=True, echo=True)
+    engine_internal = create_async_engine(MYSQL_INTERNAL_URL, future=True, echo=False)
     SessionAsync = sessionmaker(engine_internal, class_=AsyncSession, expire_on_commit=False)
 
     # mysql internal sync

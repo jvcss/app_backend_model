@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.db.session import SessionAsync, SessionSync
 from app.helpers.getters import isDebugMode
 from app.models.user import User
@@ -23,8 +24,8 @@ def get_db_sync():
         db.close()
 
 
-def get_current_user(
-        token: str = Depends(oauth2_scheme), 
+async def get_current_user(
+        token: str = Depends(oauth2_scheme),
                      db: AsyncSession = Depends(get_db),
                      ):
     credentials_exception = HTTPException(
@@ -41,7 +42,8 @@ def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).get(int(user_id))
+    result = await db.execute(select(User).where(User.id == int(user_id)))
+    user = result.scalar_one_or_none()
     if not user or int(tv) != int(user.token_version or 1):
         raise credentials_exception
     return user

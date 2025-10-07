@@ -15,3 +15,4 @@ celery[redis]
 flower
 cryptography
 pyotp
+qrcode[pil]
