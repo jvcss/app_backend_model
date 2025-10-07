@@ -21,3 +21,4 @@ class User(Base):
     two_factor_enabled = Column(Boolean, default=False, nullable=False)
     two_factor_secret = Column(String(64), nullable=True)      # base32 TOTP secret
     token_version = Column(Integer, default=1, nullable=False) # invalidate old JWTs
+

@@ -21,7 +21,7 @@
 
 """
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
 from jose import JWTError, jwt
 import pyotp
 from redis import Redis
@@ -82,17 +82,21 @@ async def read_me(current_user: User = Depends(get_current_user)):
 
 @router.post("/logout")
 async def logout(
-    logout_all: bool = False,
-    redis: Redis = Depends(get_redis),
-    db: AsyncSession = Depends(get_db)
+    authorization: str = Header(...),
+    redis: Redis = Depends(get_redis)
 ):
-    if logout_all:
-        # Incrementa versão (invalida tudo)
-        current_user.token_version += 1
-        await db.commit()
-    else:
-        # Blacklist Redis (invalida apenas atual)
-        await redis.setex(f"blacklist:{token}", ttl, "revoked")
+    token = authorization.replace("Bearer ", "")
+    
+    # Decodifica para pegar expiração
+    from jose import jwt
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    exp = payload["exp"]
+    ttl = exp - int(datetime.now(timezone.utc).timestamp())
+    
+    # Adiciona à blacklist
+    await redis.setex(f"blacklist:{token}", ttl, "revoked")
+    
+    return {"message": "Logout successful"}
 
 @router.post("/register", response_model=Token)
 async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):

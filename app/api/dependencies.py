@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 import redis.asyncio as aioredis
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import SessionAsync, SessionSync
 from app.helpers.getters import isDebugMode
 from app.models.user import User
@@ -23,7 +23,10 @@ def get_db_sync():
         db.close()
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db_sync)):
+def get_current_user(
+        token: str = Depends(oauth2_scheme), 
+                     db: AsyncSession = Depends(get_db),
+                     ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciais inválidas",
