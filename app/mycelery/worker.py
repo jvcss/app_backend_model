@@ -72,3 +72,26 @@ def send_password_otp_local(email: str, otp: str):
     print(f"Código: {otp}")
     print(f"====================")
     return {"sent": True}
+
+@celery_app.task(name="send_whatsapp_log", max_retries=3)
+def send_whatsapp_log(api_url: str, token: str, instance: str, phone_number: str, message: str):
+    """Tarefa Celery para enviar log via WhatsApp"""
+    try:
+        import asyncio
+        from app.services.whatsapp import WhatsAppService
+
+        # Inicializa o serviço WhatsApp
+        whatsapp_service = WhatsAppService(
+            api_url=api_url,
+            token=token,
+            instance=instance
+        )
+
+        # Envia a mensagem de forma assíncrona
+        asyncio.run(whatsapp_service.send_message(phone_number, message))
+        return True
+
+    except Exception as e:
+        print(f"Erro ao enviar log via WhatsApp: {e}")
+        # Em caso de falha, tenta novamente com backoff exponencial que significa que a cada falha o tempo de espera dobra
+        raise send_whatsapp_log.retry(exc=e, countdown=2 ** send_whatsapp_log.request.retries)
