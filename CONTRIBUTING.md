@@ -38,5 +38,5 @@ alembic upgrade head
 # To copy the code in pieces slipt by the current folder
 ```sh
 # todos-arquivos.mda &&
-find ./app \( -name "*.py" -o -name "*.md" -o -name "*.txt" -o -name "*.yaml" -o -name "*.sh" -o -name "*.env.example" -o -name "*.Dockerfile" \) -type f -print0 | while IFS= read -r -d '' file; do echo "# --- Conteúdo do arquivo: $file ---" >> todos-arquivos.mda; cat "$file" >> todos-arquivos.mda; echo -e "\n\n" >> todos-arquivos.mda; done
+find . -name "*.py" -print0 | xargs -0 -I {} bash -c 'echo -e "\n# --- File --- {}\n"; cat "{}"' > app.md
 ```
